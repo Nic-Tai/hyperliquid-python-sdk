@@ -137,6 +137,39 @@ def validate_auth():
     except Exception as e:
         return jsonify({"status": False, "message": f"Authentication error: {str(e)}"}), 500
 
+@app.route('/api/auth/save', methods=['POST'])
+def save_credentials():
+    """Save API credentials to database"""
+    try:
+        data = request.get_json()
+        api_key = data.get('api_key')
+        account_address = data.get('account_address')
+        testnet = data.get('testnet', False)
+        
+        if not api_key or not account_address:
+            return jsonify({"status": "error", "message": "API key and account address are required"}), 400
+        
+        # Save credentials to database
+        if db.save_credentials(api_key, account_address, testnet):
+            # Initialize API instances
+            base_url = "https://api.hyperliquid-testnet.xyz" if testnet else "https://api.hyperliquid.xyz"
+            info = Info(base_url=base_url)
+            exchange = Exchange(info, api_key)
+            
+            # Store in global instances
+            api_instances[account_address] = {
+                'info': info,
+                'exchange': exchange,
+                'testnet': testnet
+            }
+            
+            return jsonify({"status": "success", "message": "Credentials saved successfully"})
+        else:
+            return jsonify({"status": "error", "message": "Failed to save credentials"}), 500
+            
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Error saving credentials: {str(e)}"}), 500
+
 @app.route('/api/orders/place', methods=['POST'])
 def place_order():
     """Place a new order"""

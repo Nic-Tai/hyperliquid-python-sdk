@@ -68,6 +68,33 @@ class HyperliquidApp {
         }
     }
 
+    async saveCredentials(apiKey, accountAddress) {
+        try {
+            const response = await this.makeRequest('/auth/save', {
+                method: 'POST',
+                body: JSON.stringify({
+                    api_key: apiKey,
+                    account_address: accountAddress
+                })
+            });
+            
+            if (response.status === 'success') {
+                this.apiKey = apiKey;
+                this.accountAddress = accountAddress;
+                this.isAuthenticated = true;
+                this.updateUIConnectionState();
+                this.showNotification('Credentials saved successfully', 'success');
+                return response;
+            } else {
+                throw new Error(response.message || 'Failed to save credentials');
+            }
+        } catch (error) {
+            console.error('Error saving credentials:', error);
+            this.showNotification('Error saving credentials: ' + error.message, 'error');
+            throw error;
+        }
+    }
+
     async clearCredentials() {
         try {
             await this.makeRequest('/auth/clear', { method: 'POST' });
