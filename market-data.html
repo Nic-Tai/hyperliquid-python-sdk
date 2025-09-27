@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Data - Hyperliquid Trading Dashboard</title>
+    <link rel="stylesheet" href="src/styles/main.css">
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2>Hyperliquid</h2>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="index.html" class="nav-link">
+                        <i data-feather="home"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="trading.html" class="nav-link">
+                        <i data-feather="trending-up"></i>
+                        <span>Trading</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="portfolio.html" class="nav-link">
+                        <i data-feather="pie-chart"></i>
+                        <span>Portfolio</span>
+                    </a>
+                </li>
+                <li class="nav-item active">
+                    <a href="market-data.html" class="nav-link">
+                        <i data-feather="bar-chart-2"></i>
+                        <span>Market Data</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="settings.html" class="nav-link">
+                        <i data-feather="settings"></i>
+                        <span>Settings</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <h1>Market Data</h1>
+                </div>
+                <div class="header-right">
+                    <div class="market-search">
+                        <input type="text" id="marketSearch" placeholder="Search markets..." class="form-input">
+                        <i data-feather="search"></i>
+                    </div>
+                    <div class="connection-status" id="connectionStatus">
+                        <div class="status-indicator offline"></div>
+                        <span class="status-text">Disconnected</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Market Data Content -->
+            <div class="market-data-content">
+                <!-- Market Overview -->
+                <div class="market-overview">
+                    <div class="overview-cards">
+                        <div class="card overview-card">
+                            <div class="card-body">
+                                <div class="overview-item">
+                                    <div class="overview-label">Total Volume (24h)</div>
+                                    <div class="overview-value" id="totalVolume">$0</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card overview-card">
+                            <div class="card-body">
+                                <div class="overview-item">
+                                    <div class="overview-label">Active Markets</div>
+                                    <div class="overview-value" id="activeMarkets">0</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card overview-card">
+                            <div class="card-body">
+                                <div class="overview-item">
+                                    <div class="overview-label">Top Gainer</div>
+                                    <div class="overview-value" id="topGainer">-</div>
+                                    <div class="overview-change positive" id="topGainerChange">+0.00%</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card overview-card">
+                            <div class="card-body">
+                                <div class="overview-item">
+                                    <div class="overview-label">Top Loser</div>
+                                    <div class="overview-value" id="topLoser">-</div>
+                                    <div class="overview-change negative" id="topLoserChange">-0.00%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Market Table and Chart Container -->
+                <div class="market-main-container">
+                    <!-- Markets Table -->
+                    <div class="markets-table-container">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Markets</h3>
+                                <div class="table-controls">
+                                    <select id="sortBy" class="form-select">
+                                        <option value="volume">Volume</option>
+                                        <option value="price">Price</option>
+                                        <option value="change">24h Change</option>
+                                        <option value="name">Name</option>
+                                    </select>
+                                    <button class="btn btn-secondary btn-sm" id="refreshMarkets">
+                                        <i data-feather="refresh-cw"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-container">
+                                    <table class="table" id="marketsTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Market</th>
+                                                <th>Price</th>
+                                                <th>24h Change</th>
+                                                <th>24h Volume</th>
+                                                <th>Open Interest</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="marketsBody">
+                                            <tr>
+                                                <td colspan="6" class="loading">Loading markets...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Price Chart -->
+                    <div class="price-chart-container">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 id="chartTitle">Select a market</h3>
+                                <div class="chart-controls">
+                                    <div class="timeframe-buttons">
+                                        <button class="btn btn-sm" data-timeframe="1m">1m</button>
+                                        <button class="btn btn-sm" data-timeframe="5m">5m</button>
+                                        <button class="btn btn-sm" data-timeframe="15m">15m</button>
+                                        <button class="btn btn-sm active" data-timeframe="1h">1h</button>
+                                        <button class="btn btn-sm" data-timeframe="4h">4h</button>
+                                        <button class="btn btn-sm" data-timeframe="1d">1D</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="priceChart" width="400" height="300"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Market Details -->
+                <div class="market-details" id="marketDetails" style="display: none;">
+                    <div class="details-grid">
+                        <!-- Order Book -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Order Book</h3>
+                                <div class="orderbook-controls">
+                                    <select id="orderbookPrecision" class="form-select">
+                                        <option value="0.01">0.01</option>
+                                        <option value="0.1" selected>0.1</option>
+                                        <option value="1">1</option>
+                                        <option value="10">10</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="orderbook">
+                                    <div class="orderbook-section">
+                                        <div class="orderbook-header">
+                                            <span>Price</span>
+                                            <span>Size</span>
+                                            <span>Total</span>
+                                        </div>
+                                        <div class="orderbook-asks" id="orderbookAsks">
+                                            <div class="no-data">No asks</div>
+                                        </div>
+                                    </div>
+                                    <div class="orderbook-spread" id="orderbookSpread">
+                                        <div class="spread-value">Spread: $0.00</div>
+                                    </div>
+                                    <div class="orderbook-section">
+                                        <div class="orderbook-bids" id="orderbookBids">
+                                            <div class="no-data">No bids</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recent Trades -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Recent Trades</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="trades-container">
+                                    <div class="trades-header">
+                                        <span>Time</span>
+                                        <span>Price</span>
+                                        <span>Size</span>
+                                        <span>Side</span>
+                                    </div>
+                                    <div class="trades-list" id="recentTrades">
+                                        <div class="no-data">No recent trades</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Market Stats -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Market Statistics</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="stats-grid">
+                                    <div class="stat-item">
+                                        <div class="stat-label">24h High</div>
+                                        <div class="stat-value" id="high24h">$0.00</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-label">24h Low</div>
+                                        <div class="stat-value" id="low24h">$0.00</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-label">24h Volume</div>
+                                        <div class="stat-value" id="volume24h">$0</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-label">Open Interest</div>
+                                        <div class="stat-value" id="openInterest">$0</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-label">Funding Rate</div>
+                                        <div class="stat-value" id="fundingRate">0.00%</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-label">Next Funding</div>
+                                        <div class="stat-value" id="nextFunding">--:--</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Watchlist -->
+                <div class="watchlist-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Watchlist</h3>
+                            <button class="btn btn-secondary btn-sm" id="addToWatchlist">
+                                <i data-feather="plus"></i>
+                                Add Market
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="watchlist-grid" id="watchlistGrid">
+                                <div class="no-data">No markets in watchlist</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add to Watchlist Modal -->
+    <div class="modal" id="watchlistModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add to Watchlist</h3>
+                <button class="modal-close" id="closeWatchlistModal">
+                    <i data-feather="x"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="watchlistSearch">Search Market</label>
+                    <input type="text" id="watchlistSearch" class="form-input" placeholder="Enter market symbol...">
+                </div>
+                <div class="market-suggestions" id="marketSuggestions">
+                    <!-- Market suggestions will be populated here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelWatchlist">Cancel</button>
+                <button class="btn btn-primary" id="confirmWatchlist" disabled>Add to Watchlist</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="src/js/main.js"></script>
+    <script src="src/js/market-data.js"></script>
+</body>
+</html>

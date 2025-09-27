@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio - Hyperliquid Trading Dashboard</title>
+    <link rel="stylesheet" href="src/styles/main.css">
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2>Hyperliquid</h2>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="index.html" class="nav-link">
+                        <i data-feather="home"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="trading.html" class="nav-link">
+                        <i data-feather="trending-up"></i>
+                        <span>Trading</span>
+                    </a>
+                </li>
+                <li class="nav-item active">
+                    <a href="portfolio.html" class="nav-link">
+                        <i data-feather="pie-chart"></i>
+                        <span>Portfolio</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="market-data.html" class="nav-link">
+                        <i data-feather="bar-chart-2"></i>
+                        <span>Market Data</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="settings.html" class="nav-link">
+                        <i data-feather="settings"></i>
+                        <span>Settings</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <h1>Portfolio</h1>
+                </div>
+                <div class="header-right">
+                    <button class="btn btn-secondary" id="refreshPortfolio">
+                        <i data-feather="refresh-cw"></i>
+                        Refresh
+                    </button>
+                    <div class="connection-status" id="connectionStatus">
+                        <div class="status-indicator offline"></div>
+                        <span class="status-text">Disconnected</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Portfolio Content -->
+            <div class="portfolio-content">
+                <!-- Portfolio Summary -->
+                <div class="portfolio-summary">
+                    <div class="summary-cards">
+                        <div class="card summary-card">
+                            <div class="card-body">
+                                <div class="summary-item">
+                                    <div class="summary-label">Total Portfolio Value</div>
+                                    <div class="summary-value" id="totalPortfolioValue">$0.00</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card summary-card">
+                            <div class="card-body">
+                                <div class="summary-item">
+                                    <div class="summary-label">Unrealized PnL</div>
+                                    <div class="summary-value" id="unrealizedPnl">$0.00</div>
+                                    <div class="summary-percentage" id="unrealizedPnlPercent">0.00%</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card summary-card">
+                            <div class="card-body">
+                                <div class="summary-item">
+                                    <div class="summary-label">Available Balance</div>
+                                    <div class="summary-value" id="availableBalance">$0.00</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card summary-card">
+                            <div class="card-body">
+                                <div class="summary-item">
+                                    <div class="summary-label">Margin Used</div>
+                                    <div class="summary-value" id="marginUsed">$0.00</div>
+                                    <div class="summary-percentage" id="marginUsedPercent">0.00%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Portfolio Charts -->
+                <div class="portfolio-charts">
+                    <div class="chart-container">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Portfolio Allocation</h3>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="allocationChart" width="400" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>PnL History</h3>
+                                <div class="chart-controls">
+                                    <select id="pnlTimeframe" class="form-select">
+                                        <option value="1d">1 Day</option>
+                                        <option value="7d" selected>7 Days</option>
+                                        <option value="30d">30 Days</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="pnlChart" width="400" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Positions Table -->
+                <div class="positions-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Open Positions</h3>
+                            <div class="header-actions">
+                                <button class="btn btn-secondary btn-sm" id="closeAllPositions">
+                                    <i data-feather="x-circle"></i>
+                                    Close All
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-container">
+                                <table class="table" id="positionsTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Asset</th>
+                                            <th>Side</th>
+                                            <th>Size</th>
+                                            <th>Entry Price</th>
+                                            <th>Mark Price</th>
+                                            <th>Unrealized PnL</th>
+                                            <th>ROE %</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="positionsBody">
+                                        <tr>
+                                            <td colspan="8" class="no-data">No open positions</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trade History -->
+                <div class="trade-history-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Trade History</h3>
+                            <div class="header-actions">
+                                <select id="historyTimeframe" class="form-select">
+                                    <option value="1d">Today</option>
+                                    <option value="7d" selected>Last 7 Days</option>
+                                    <option value="30d">Last 30 Days</option>
+                                    <option value="all">All Time</option>
+                                </select>
+                                <button class="btn btn-secondary btn-sm" id="exportHistory">
+                                    <i data-feather="download"></i>
+                                    Export
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-container">
+                                <table class="table" id="tradeHistoryTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Time</th>
+                                            <th>Asset</th>
+                                            <th>Side</th>
+                                            <th>Size</th>
+                                            <th>Price</th>
+                                            <th>Fee</th>
+                                            <th>Realized PnL</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tradeHistoryBody">
+                                        <tr>
+                                            <td colspan="8" class="no-data">No trade history</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Performance Metrics -->
+                <div class="performance-metrics">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Performance Metrics</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="metrics-grid">
+                                <div class="metric-item">
+                                    <div class="metric-label">Total Trades</div>
+                                    <div class="metric-value" id="totalTrades">0</div>
+                                </div>
+                                <div class="metric-item">
+                                    <div class="metric-label">Win Rate</div>
+                                    <div class="metric-value" id="winRate">0.00%</div>
+                                </div>
+                                <div class="metric-item">
+                                    <div class="metric-label">Average Win</div>
+                                    <div class="metric-value" id="averageWin">$0.00</div>
+                                </div>
+                                <div class="metric-item">
+                                    <div class="metric-label">Average Loss</div>
+                                    <div class="metric-value" id="averageLoss">$0.00</div>
+                                </div>
+                                <div class="metric-item">
+                                    <div class="metric-label">Profit Factor</div>
+                                    <div class="metric-value" id="profitFactor">0.00</div>
+                                </div>
+                                <div class="metric-item">
+                                    <div class="metric-label">Max Drawdown</div>
+                                    <div class="metric-value" id="maxDrawdown">0.00%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="src/js/main.js"></script>
+    <script src="src/js/portfolio.js"></script>
+</body>
+</html>

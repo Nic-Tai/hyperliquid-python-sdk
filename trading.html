@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading - Hyperliquid Trading Dashboard</title>
+    <link rel="stylesheet" href="src/styles/main.css">
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2>Hyperliquid</h2>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="index.html" class="nav-link">
+                        <i data-feather="home"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item active">
+                    <a href="trading.html" class="nav-link">
+                        <i data-feather="trending-up"></i>
+                        <span>Trading</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="portfolio.html" class="nav-link">
+                        <i data-feather="pie-chart"></i>
+                        <span>Portfolio</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="market-data.html" class="nav-link">
+                        <i data-feather="bar-chart-2"></i>
+                        <span>Market Data</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="settings.html" class="nav-link">
+                        <i data-feather="settings"></i>
+                        <span>Settings</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <h1>Trading</h1>
+                </div>
+                <div class="header-right">
+                    <div class="connection-status" id="connectionStatus">
+                        <div class="status-indicator offline"></div>
+                        <span class="status-text">Disconnected</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Trading Content -->
+            <div class="trading-content">
+                <!-- Market Selection -->
+                <div class="market-selection">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Select Market</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="market-selector">
+                                <select id="assetSelect" class="form-select">
+                                    <option value="">Loading assets...</option>
+                                </select>
+                                <div class="market-info" id="marketInfo">
+                                    <div class="price-info">
+                                        <span class="current-price" id="currentPrice">$0.00</span>
+                                        <span class="price-change" id="priceChange">+0.00%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trading Interface -->
+                <div class="trading-interface">
+                    <!-- Order Form -->
+                    <div class="order-form-container">
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="order-tabs">
+                                    <button class="tab-button active" data-tab="buy">Buy</button>
+                                    <button class="tab-button" data-tab="sell">Sell</button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <form id="orderForm" class="order-form">
+                                    <div class="form-group">
+                                        <label for="orderType">Order Type</label>
+                                        <select id="orderType" name="orderType" class="form-select">
+                                            <option value="market">Market</option>
+                                            <option value="limit">Limit</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group" id="priceGroup" style="display: none;">
+                                        <label for="price">Price</label>
+                                        <input type="number" id="price" name="price" class="form-input" 
+                                               step="0.01" placeholder="0.00">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="size">Size</label>
+                                        <input type="number" id="size" name="size" class="form-input" 
+                                               step="0.0001" placeholder="0.0000" required>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="reduceOnly">Reduce Only</label>
+                                        <input type="checkbox" id="reduceOnly" name="reduceOnly" class="form-checkbox">
+                                    </div>
+
+                                    <div class="order-summary">
+                                        <div class="summary-row">
+                                            <span>Estimated Cost:</span>
+                                            <span id="estimatedCost">$0.00</span>
+                                        </div>
+                                    </div>
+
+                                    <button type="submit" class="btn btn-primary btn-full" id="placeOrderBtn">
+                                        <span id="orderButtonText">Place Buy Order</span>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Order Book -->
+                    <div class="orderbook-container">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Order Book</h3>
+                                <button class="btn btn-secondary btn-sm" id="refreshOrderbook">
+                                    <i data-feather="refresh-cw"></i>
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div class="orderbook" id="orderbook">
+                                    <div class="orderbook-header">
+                                        <span>Price</span>
+                                        <span>Size</span>
+                                        <span>Total</span>
+                                    </div>
+                                    <div class="orderbook-asks" id="orderbookAsks">
+                                        <!-- Sell orders will be populated here -->
+                                    </div>
+                                    <div class="orderbook-spread">
+                                        <span class="spread-label">Spread</span>
+                                        <span class="spread-value" id="spreadValue">$0.00</span>
+                                    </div>
+                                    <div class="orderbook-bids" id="orderbookBids">
+                                        <!-- Buy orders will be populated here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Open Orders -->
+                <div class="open-orders">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Open Orders</h3>
+                            <button class="btn btn-secondary btn-sm" id="refreshOrders">
+                                <i data-feather="refresh-cw"></i>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-container">
+                                <table class="table" id="openOrdersTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Asset</th>
+                                            <th>Side</th>
+                                            <th>Type</th>
+                                            <th>Size</th>
+                                            <th>Price</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="openOrdersBody">
+                                        <tr>
+                                            <td colspan="7" class="no-data">No open orders</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Trades -->
+                <div class="recent-trades">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Recent Trades</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-container">
+                                <table class="table" id="recentTradesTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Time</th>
+                                            <th>Asset</th>
+                                            <th>Side</th>
+                                            <th>Size</th>
+                                            <th>Price</th>
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="recentTradesBody">
+                                        <tr>
+                                            <td colspan="6" class="no-data">No recent trades</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="src/js/main.js"></script>
+    <script src="src/js/trading.js"></script>
+</body>
+</html>

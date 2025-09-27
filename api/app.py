@@ -14,7 +14,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from hyperliquid.api import API
 from hyperliquid.info import Info
 from hyperliquid.exchange import Exchange
-from hyperliquid.websocket_manager import WebsocketManager
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
@@ -24,9 +23,6 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 # Global variables to store API instances
 api_instances = {}
 ws_managers = {}
-
-# Global variables for WebSocket manager
-ws_manager = None
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -247,4 +243,4 @@ def handle_subscribe_market_data(data):
         })
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+    socketio.run(app, host='0.0.0.0', port=5001, debug=True)

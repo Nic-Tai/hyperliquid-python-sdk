@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Hyperliquid Trading</title>
+    <link rel="stylesheet" href="src/styles/main.css">
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2>Hyperliquid</h2>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html"><i data-feather="home"></i> Dashboard</a></li>
+                <li><a href="trading.html"><i data-feather="trending-up"></i> Trading</a></li>
+                <li><a href="portfolio.html"><i data-feather="pie-chart"></i> Portfolio</a></li>
+                <li><a href="market-data.html"><i data-feather="bar-chart-2"></i> Market Data</a></li>
+                <li><a href="settings.html" class="active"><i data-feather="settings"></i> Settings</a></li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <h1>Settings</h1>
+                </div>
+                <div class="header-right">
+                    <div class="connection-status" id="connectionStatus">
+                        <span class="status-indicator"></span>
+                        <span class="status-text">Disconnected</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Settings Content -->
+            <div class="settings-container">
+                <!-- API Configuration -->
+                <div class="settings-section">
+                    <div class="section-header">
+                        <h2><i data-feather="key"></i> API Configuration</h2>
+                        <p>Configure your Hyperliquid API credentials</p>
+                    </div>
+                    <div class="settings-card">
+                        <form id="apiConfigForm">
+                            <div class="form-group">
+                                <label for="apiKey">API Key</label>
+                                <div class="input-group">
+                                    <input type="password" id="apiKey" placeholder="Enter your API key">
+                                    <button type="button" class="btn btn-secondary" id="toggleApiKey">
+                                        <i data-feather="eye"></i>
+                                    </button>
+                                </div>
+                                <small class="form-help">Your private API key for trading operations</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="accountAddress">Account Address</label>
+                                <input type="text" id="accountAddress" placeholder="Enter your account address">
+                                <small class="form-help">Your Hyperliquid account address</small>
+                            </div>
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="testnet">
+                                    <span class="checkmark"></span>
+                                    Use Testnet
+                                </label>
+                                <small class="form-help">Enable to use testnet environment</small>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">
+                                    <i data-feather="save"></i>
+                                    Save Configuration
+                                </button>
+                                <button type="button" class="btn btn-secondary" id="testConnection">
+                                    <i data-feather="wifi"></i>
+                                    Test Connection
+                                </button>
+                                <button type="button" class="btn btn-danger" id="clearCredentials">
+                                    <i data-feather="trash-2"></i>
+                                    Clear Credentials
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Trading Preferences -->
+                <div class="settings-section">
+                    <div class="section-header">
+                        <h2><i data-feather="sliders"></i> Trading Preferences</h2>
+                        <p>Customize your trading experience</p>
+                    </div>
+                    <div class="settings-card">
+                        <form id="tradingPreferencesForm">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="defaultOrderType">Default Order Type</label>
+                                    <select id="defaultOrderType">
+                                        <option value="market">Market</option>
+                                        <option value="limit">Limit</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="defaultLeverage">Default Leverage</label>
+                                    <select id="defaultLeverage">
+                                        <option value="1">1x</option>
+                                        <option value="2">2x</option>
+                                        <option value="5">5x</option>
+                                        <option value="10">10x</option>
+                                        <option value="20">20x</option>
+                                        <option value="50">50x</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="slippageTolerance">Slippage Tolerance (%)</label>
+                                    <input type="number" id="slippageTolerance" min="0" max="10" step="0.1" value="0.5">
+                                </div>
+                                <div class="form-group">
+                                    <label for="autoRefreshInterval">Auto Refresh (seconds)</label>
+                                    <input type="number" id="autoRefreshInterval" min="5" max="300" step="5" value="30">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="confirmOrders" checked>
+                                    <span class="checkmark"></span>
+                                    Confirm orders before submission
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="soundNotifications">
+                                    <span class="checkmark"></span>
+                                    Enable sound notifications
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="reduceOnlyDefault">
+                                    <span class="checkmark"></span>
+                                    Default to reduce-only orders
+                                </label>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">
+                                    <i data-feather="save"></i>
+                                    Save Preferences
+                                </button>
+                                <button type="button" class="btn btn-secondary" id="resetPreferences">
+                                    <i data-feather="rotate-ccw"></i>
+                                    Reset to Defaults
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Display Settings -->
+                <div class="settings-section">
+                    <div class="section-header">
+                        <h2><i data-feather="monitor"></i> Display Settings</h2>
+                        <p>Customize the appearance and layout</p>
+                    </div>
+                    <div class="settings-card">
+                        <form id="displaySettingsForm">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="theme">Theme</label>
+                                    <select id="theme">
+                                        <option value="dark">Dark</option>
+                                        <option value="light">Light</option>
+                                        <option value="auto">Auto</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="currency">Display Currency</label>
+                                    <select id="currency">
+                                        <option value="USD">USD</option>
+                                        <option value="USDC">USDC</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="priceDecimals">Price Decimals</label>
+                                    <select id="priceDecimals">
+                                        <option value="2">2</option>
+                                        <option value="4">4</option>
+                                        <option value="6">6</option>
+                                        <option value="8">8</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="sizeDecimals">Size Decimals</label>
+                                    <select id="sizeDecimals">
+                                        <option value="2">2</option>
+                                        <option value="4">4</option>
+                                        <option value="6">6</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="compactMode">
+                                    <span class="checkmark"></span>
+                                    Compact mode
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="showAdvancedFeatures">
+                                    <span class="checkmark"></span>
+                                    Show advanced features
+                                </label>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">
+                                    <i data-feather="save"></i>
+                                    Save Settings
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Risk Management -->
+                <div class="settings-section">
+                    <div class="section-header">
+                        <h2><i data-feather="shield"></i> Risk Management</h2>
+                        <p>Configure risk management and safety features</p>
+                    </div>
+                    <div class="settings-card">
+                        <form id="riskManagementForm">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="maxPositionSize">Max Position Size (USD)</label>
+                                    <input type="number" id="maxPositionSize" min="0" step="100" placeholder="No limit">
+                                    <small class="form-help">Maximum position size per asset (0 for no limit)</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="maxDailyLoss">Max Daily Loss (USD)</label>
+                                    <input type="number" id="maxDailyLoss" min="0" step="50" placeholder="No limit">
+                                    <small class="form-help">Maximum daily loss limit (0 for no limit)</small>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="stopLossPercent">Default Stop Loss (%)</label>
+                                    <input type="number" id="stopLossPercent" min="0" max="50" step="0.5" placeholder="No default">
+                                </div>
+                                <div class="form-group">
+                                    <label for="takeProfitPercent">Default Take Profit (%)</label>
+                                    <input type="number" id="takeProfitPercent" min="0" max="100" step="0.5" placeholder="No default">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="enableRiskAlerts">
+                                    <span class="checkmark"></span>
+                                    Enable risk alerts
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="autoStopLoss">
+                                    <span class="checkmark"></span>
+                                    Auto-apply stop loss to new positions
+                                </label>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">
+                                    <i data-feather="save"></i>
+                                    Save Risk Settings
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Data Export -->
+                <div class="settings-section">
+                    <div class="section-header">
+                        <h2><i data-feather="download"></i> Data Export</h2>
+                        <p>Export your trading data and history</p>
+                    </div>
+                    <div class="settings-card">
+                        <div class="export-options">
+                            <div class="export-item">
+                                <div class="export-info">
+                                    <h3>Trade History</h3>
+                                    <p>Export all your completed trades</p>
+                                </div>
+                                <button class="btn btn-secondary" id="exportTrades">
+                                    <i data-feather="download"></i>
+                                    Export CSV
+                                </button>
+                            </div>
+                            <div class="export-item">
+                                <div class="export-info">
+                                    <h3>Portfolio History</h3>
+                                    <p>Export portfolio performance data</p>
+                                </div>
+                                <button class="btn btn-secondary" id="exportPortfolio">
+                                    <i data-feather="download"></i>
+                                    Export CSV
+                                </button>
+                            </div>
+                            <div class="export-item">
+                                <div class="export-info">
+                                    <h3>Settings Backup</h3>
+                                    <p>Backup your current settings</p>
+                                </div>
+                                <div class="export-actions">
+                                    <button class="btn btn-secondary" id="exportSettings">
+                                        <i data-feather="download"></i>
+                                        Export
+                                    </button>
+                                    <button class="btn btn-secondary" id="importSettings">
+                                        <i data-feather="upload"></i>
+                                        Import
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- About -->
+                <div class="settings-section">
+                    <div class="section-header">
+                        <h2><i data-feather="info"></i> About</h2>
+                        <p>Application information and support</p>
+                    </div>
+                    <div class="settings-card">
+                        <div class="about-info">
+                            <div class="about-item">
+                                <strong>Version:</strong>
+                                <span>1.0.0</span>
+                            </div>
+                            <div class="about-item">
+                                <strong>Build:</strong>
+                                <span id="buildDate">2024-01-01</span>
+                            </div>
+                            <div class="about-item">
+                                <strong>API Version:</strong>
+                                <span>v1</span>
+                            </div>
+                            <div class="about-item">
+                                <strong>Support:</strong>
+                                <a href="mailto:support@example.com">support@example.com</a>
+                            </div>
+                        </div>
+                        <div class="about-actions">
+                            <button class="btn btn-secondary" id="checkUpdates">
+                                <i data-feather="refresh-cw"></i>
+                                Check for Updates
+                            </button>
+                            <button class="btn btn-secondary" id="viewLogs">
+                                <i data-feather="file-text"></i>
+                                View Logs
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Hidden file input for settings import -->
+    <input type="file" id="settingsFileInput" accept=".json" style="display: none;">
+
+    <!-- Notification Container -->
+    <div id="notificationContainer" class="notification-container"></div>
+
+    <!-- Scripts -->
+    <script src="src/js/main.js"></script>
+    <script src="src/js/settings.js"></script>
+    <script>
+        // Initialize feather icons
+        feather.replace();
+    </script>
+</body>
+</html>
