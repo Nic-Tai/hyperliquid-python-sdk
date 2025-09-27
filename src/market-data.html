@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Data - Hyperliquid Dashboard</title>
+    <link rel="stylesheet" href="./styles/main.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Navigation Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2 class="logo">Hyperliquid</h2>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="index.html" class="nav-link">
+                        <i data-feather="home"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="trading.html" class="nav-link">
+                        <i data-feather="trending-up"></i>
+                        <span>Trading</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="portfolio.html" class="nav-link">
+                        <i data-feather="briefcase"></i>
+                        <span>Portfolio</span>
+                    </a>
+                </li>
+                <li class="nav-item active">
+                    <a href="market-data.html" class="nav-link">
+                        <i data-feather="bar-chart-2"></i>
+                        <span>Market Data</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="settings.html" class="nav-link">
+                        <i data-feather="settings"></i>
+                        <span>Settings</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <h1>Market Data</h1>
+                </div>
+                <div class="header-right">
+                    <div class="connection-status" id="connectionStatus">
+                        <span class="status-indicator offline"></span>
+                        <span class="status-text">Disconnected</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Market Data Content -->
+            <div class="market-data-content">
+                <!-- Market Overview -->
+                <div class="market-overview">
+                    <div class="overview-cards">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Total Volume (24h)</h3>
+                                <i data-feather="activity"></i>
+                            </div>
+                            <div class="card-content">
+                                <div class="metric-value" id="totalVolume">$0</div>
+                                <div class="metric-change" id="volumeChange">+0.00%</div>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Active Markets</h3>
+                                <i data-feather="trending-up"></i>
+                            </div>
+                            <div class="card-content">
+                                <div class="metric-value" id="activeMarkets">0</div>
+                                <div class="metric-label">Trading Pairs</div>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Top Gainer</h3>
+                                <i data-feather="arrow-up"></i>
+                            </div>
+                            <div class="card-content">
+                                <div class="metric-value" id="topGainer">-</div>
+                                <div class="metric-change positive" id="topGainerChange">+0.00%</div>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Top Loser</h3>
+                                <i data-feather="arrow-down"></i>
+                            </div>
+                            <div class="card-content">
+                                <div class="metric-value" id="topLoser">-</div>
+                                <div class="metric-change negative" id="topLoserChange">-0.00%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Market Table -->
+                <div class="markets-section">
+                    <div class="section-header">
+                        <h2>All Markets</h2>
+                        <div class="header-actions">
+                            <div class="search-box">
+                                <i data-feather="search"></i>
+                                <input type="text" id="marketSearch" placeholder="Search markets...">
+                            </div>
+                            <button class="btn btn-secondary" onclick="refreshMarketData()">
+                                <i data-feather="refresh-cw"></i>
+                                Refresh
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="markets-table-container">
+                        <table class="markets-table" id="marketsTable">
+                            <thead>
+                                <tr>
+                                    <th onclick="sortTable('symbol')">Symbol <i data-feather="chevron-up"></i></th>
+                                    <th onclick="sortTable('price')">Price <i data-feather="chevron-up"></i></th>
+                                    <th onclick="sortTable('change24h')">24h Change <i data-feather="chevron-up"></i></th>
+                                    <th onclick="sortTable('volume24h')">24h Volume <i data-feather="chevron-up"></i></th>
+                                    <th onclick="sortTable('high24h')">24h High <i data-feather="chevron-up"></i></th>
+                                    <th onclick="sortTable('low24h')">24h Low <i data-feather="chevron-up"></i></th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="marketsTableBody">
+                                <tr class="loading-row">
+                                    <td colspan="7">
+                                        <div class="loading-state">
+                                            <div class="spinner"></div>
+                                            <p>Loading market data...</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Price Chart Section -->
+                <div class="chart-section">
+                    <div class="section-header">
+                        <h2>Price Chart</h2>
+                        <div class="chart-controls">
+                            <select id="chartSymbol" onchange="updateChart()">
+                                <option value="">Select Symbol</option>
+                            </select>
+                            <div class="timeframe-buttons">
+                                <button class="btn btn-sm" data-timeframe="1m" onclick="setTimeframe('1m')">1m</button>
+                                <button class="btn btn-sm" data-timeframe="5m" onclick="setTimeframe('5m')">5m</button>
+                                <button class="btn btn-sm active" data-timeframe="1h" onclick="setTimeframe('1h')">1h</button>
+                                <button class="btn btn-sm" data-timeframe="4h" onclick="setTimeframe('4h')">4h</button>
+                                <button class="btn btn-sm" data-timeframe="1d" onclick="setTimeframe('1d')">1d</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <div class="chart-placeholder" id="chartPlaceholder">
+                            <i data-feather="bar-chart-2"></i>
+                            <p>Select a symbol to view price chart</p>
+                        </div>
+                        <canvas id="priceChart" style="display: none;"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Order Book Section -->
+                <div class="orderbook-section">
+                    <div class="section-header">
+                        <h2>Order Book</h2>
+                        <select id="orderbookSymbol" onchange="updateOrderbook()">
+                            <option value="">Select Symbol</option>
+                        </select>
+                    </div>
+                    
+                    <div class="orderbook-container">
+                        <div class="orderbook-side">
+                            <h3>Asks</h3>
+                            <div class="orderbook-table" id="asksTable">
+                                <div class="orderbook-header">
+                                    <span>Price</span>
+                                    <span>Size</span>
+                                    <span>Total</span>
+                                </div>
+                                <div class="orderbook-body" id="asksBody">
+                                    <div class="empty-orderbook">
+                                        <p>No data available</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="spread-info">
+                            <div class="spread-value" id="spreadValue">-</div>
+                            <div class="spread-label">Spread</div>
+                        </div>
+                        
+                        <div class="orderbook-side">
+                            <h3>Bids</h3>
+                            <div class="orderbook-table" id="bidsTable">
+                                <div class="orderbook-header">
+                                    <span>Price</span>
+                                    <span>Size</span>
+                                    <span>Total</span>
+                                </div>
+                                <div class="orderbook-body" id="bidsBody">
+                                    <div class="empty-orderbook">
+                                        <p>No data available</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="lib/feather.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script type="module" src="./js/main.js"></script>
+    <script type="module" src="./js/market-data.js"></script>
+</body>
+</html>

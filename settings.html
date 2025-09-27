@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Settings - Hyperliquid Trading</title>
     <link rel="stylesheet" href="src/styles/main.css">
-    <script src="https://unpkg.com/feather-icons"></script>
+    <script src="src/lib/feather.min.js"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 <body>
@@ -386,6 +386,18 @@
     <script>
         // Initialize feather icons
         feather.replace();
+        
+        // Initialize app and settings
+        document.addEventListener('DOMContentLoaded', function() {
+            // Create app instance
+            const app = new HyperliquidApp();
+            
+            // Create settings instance with app reference
+            const settings = new Settings(app);
+            
+            // Initialize the app
+            app.init();
+        });
     </script>
 </body>
 </html>

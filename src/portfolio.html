@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio - Hyperliquid Dashboard</title>
+    <link rel="stylesheet" href="./styles/main.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Navigation Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2 class="logo">Hyperliquid</h2>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="index.html" class="nav-link">
+                        <i data-feather="home"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="trading.html" class="nav-link">
+                        <i data-feather="trending-up"></i>
+                        <span>Trading</span>
+                    </a>
+                </li>
+                <li class="nav-item active">
+                    <a href="portfolio.html" class="nav-link">
+                        <i data-feather="briefcase"></i>
+                        <span>Portfolio</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="market-data.html" class="nav-link">
+                        <i data-feather="bar-chart-2"></i>
+                        <span>Market Data</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="settings.html" class="nav-link">
+                        <i data-feather="settings"></i>
+                        <span>Settings</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <h1>Portfolio</h1>
+                </div>
+                <div class="header-right">
+                    <div class="connection-status" id="connectionStatus">
+                        <span class="status-indicator offline"></span>
+                        <span class="status-text">Disconnected</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Portfolio Content -->
+            <div class="portfolio-content">
+                <!-- Portfolio Summary -->
+                <div class="portfolio-summary">
+                    <div class="summary-cards">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Total Value</h3>
+                                <i data-feather="dollar-sign"></i>
+                            </div>
+                            <div class="card-content">
+                                <div class="metric-value" id="portfolioValue">$0.00</div>
+                                <div class="metric-change" id="portfolioChange">+0.00%</div>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Available Balance</h3>
+                                <i data-feather="credit-card"></i>
+                            </div>
+                            <div class="card-content">
+                                <div class="metric-value" id="availableBalance">$0.00</div>
+                                <div class="metric-label">Available for Trading</div>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Unrealized PnL</h3>
+                                <i data-feather="trending-up"></i>
+                            </div>
+                            <div class="card-content">
+                                <div class="metric-value" id="unrealizedPnl">$0.00</div>
+                                <div class="metric-change" id="pnlPercentage">+0.00%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Positions Table -->
+                <div class="positions-section">
+                    <div class="section-header">
+                        <h2>Open Positions</h2>
+                        <div class="header-actions">
+                            <button class="btn btn-secondary" onclick="refreshPositions()">
+                                <i data-feather="refresh-cw"></i>
+                                Refresh
+                            </button>
+                            <button class="btn btn-primary" onclick="window.location.href='trading.html'">
+                                <i data-feather="plus"></i>
+                                New Position
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="positions-table-container">
+                        <table class="positions-table" id="positionsTable">
+                            <thead>
+                                <tr>
+                                    <th>Symbol</th>
+                                    <th>Side</th>
+                                    <th>Size</th>
+                                    <th>Entry Price</th>
+                                    <th>Mark Price</th>
+                                    <th>Unrealized PnL</th>
+                                    <th>ROE %</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="positionsTableBody">
+                                <tr class="no-positions">
+                                    <td colspan="8">
+                                        <div class="empty-state">
+                                            <i data-feather="inbox"></i>
+                                            <p>No open positions</p>
+                                            <p class="text-muted">Connect your API to view positions</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Trade History -->
+                <div class="history-section">
+                    <div class="section-header">
+                        <h2>Recent Trades</h2>
+                        <button class="btn btn-secondary" onclick="refreshHistory()">
+                            <i data-feather="refresh-cw"></i>
+                            Refresh
+                        </button>
+                    </div>
+                    
+                    <div class="history-table-container">
+                        <table class="history-table" id="historyTable">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Symbol</th>
+                                    <th>Side</th>
+                                    <th>Size</th>
+                                    <th>Price</th>
+                                    <th>Fee</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody">
+                                <tr class="no-history">
+                                    <td colspan="7">
+                                        <div class="empty-state">
+                                            <i data-feather="clock"></i>
+                                            <p>No recent trades</p>
+                                            <p class="text-muted">Your trade history will appear here</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="lib/feather.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script type="module" src="./js/main.js"></script>
+    <script type="module" src="./js/portfolio.js"></script>
+</body>
+</html>

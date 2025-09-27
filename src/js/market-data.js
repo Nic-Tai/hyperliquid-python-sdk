@@ -151,13 +151,66 @@ class MarketData {
 
     async loadMarkets() {
         try {
-            const markets = await this.app.apiRequest('/api/market-data/all');
-            this.markets = markets || [];
-            this.updateMarketsTable();
-            this.updateMarketOverview();
+            // Load symbols from the new backend endpoint
+            const symbols = await this.app.apiRequest('/api/market/symbols');
+            
+            if (symbols && symbols.length > 0) {
+                // Transform symbols data to match expected market format
+                this.markets = symbols.map(symbol => ({
+                    coin: symbol.name,
+                    name: symbol.name,
+                    markPx: 0, // Will be updated by real-time data
+                    change24h: 0,
+                    volume24h: 0,
+                    openInterest: 0,
+                    maxLeverage: symbol.maxLeverage,
+                    onlyIsolated: symbol.onlyIsolated
+                }));
+                
+                this.updateMarketsTable();
+                this.updateMarketOverview();
+                
+                // Load current market data for each symbol
+                await this.loadCurrentMarketData();
+            } else {
+                this.markets = [];
+                this.updateMarketsTable();
+            }
         } catch (error) {
             console.error('Error loading markets:', error);
             this.app.showNotification('Failed to load market data', 'error');
+            // Show empty state
+            this.markets = [];
+            this.updateMarketsTable();
+        }
+    }
+
+    async loadCurrentMarketData() {
+        try {
+            // Load current market data for all symbols
+            const marketData = await this.app.apiRequest('/api/market/assets');
+            
+            if (marketData && marketData.length > 0) {
+                // Update markets with current data
+                this.markets = this.markets.map(market => {
+                    const currentData = marketData.find(data => data.coin === market.coin);
+                    if (currentData) {
+                        return {
+                            ...market,
+                            markPx: currentData.markPx || 0,
+                            change24h: currentData.change24h || 0,
+                            volume24h: currentData.volume24h || 0,
+                            openInterest: currentData.openInterest || 0
+                        };
+                    }
+                    return market;
+                });
+                
+                this.updateMarketsTable();
+                this.updateMarketOverview();
+            }
+        } catch (error) {
+            console.error('Error loading current market data:', error);
         }
     }
 

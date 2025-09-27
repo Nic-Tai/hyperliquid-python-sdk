@@ -10,14 +10,14 @@ class HyperliquidApp {
         this.init();
     }
 
-    init() {
+    async init() {
         // Initialize Feather icons
         if (typeof feather !== 'undefined') {
             feather.replace();
         }
 
-        // Load saved credentials
-        this.loadCredentials();
+        // Check connection status from backend first
+        await this.checkConnectionStatus();
         
         // Initialize WebSocket connection
         this.initWebSocket();
@@ -25,74 +25,84 @@ class HyperliquidApp {
         // Set up navigation
         this.setupNavigation();
         
-        // Check authentication status
-        if (this.apiKey && this.accountAddress) {
-            this.validateAuth();
-        }
+        // Update UI based on connection status
+        this.updateUIConnectionState();
     }
 
-    loadCredentials() {
+    async checkConnectionStatus() {
         try {
-            const savedCreds = localStorage.getItem('hyperliquid_credentials');
-            if (savedCreds) {
-                const creds = JSON.parse(savedCreds);
-                this.apiKey = creds.apiKey;
-                this.accountAddress = creds.accountAddress;
-            }
-        } catch (error) {
-            console.error('Error loading credentials:', error);
-        }
-    }
-
-    saveCredentials(apiKey, accountAddress) {
-        try {
-            const creds = { apiKey, accountAddress };
-            localStorage.setItem('hyperliquid_credentials', JSON.stringify(creds));
-            this.apiKey = apiKey;
-            this.accountAddress = accountAddress;
-        } catch (error) {
-            console.error('Error saving credentials:', error);
-        }
-    }
-
-    clearCredentials() {
-        localStorage.removeItem('hyperliquid_credentials');
-        this.apiKey = null;
-        this.accountAddress = null;
-        this.isAuthenticated = false;
-    }
-
-    async validateAuth() {
-        if (!this.apiKey || !this.accountAddress) {
-            this.updateConnectionStatus(false);
-            return false;
-        }
-
-        try {
-            const response = await this.makeRequest('/auth/validate', {
-                method: 'POST',
-                body: JSON.stringify({
-                    api_key: this.apiKey,
-                    account_address: this.accountAddress
-                })
-            });
-
-            if (response.status) {
+            const response = await this.makeRequest('/auth/status');
+            if (response.status === 'success' && response.connected) {
                 this.isAuthenticated = true;
-                this.updateConnectionStatus(true);
-                return true;
+                this.accountAddress = response.account_address;
+                console.log('Found stored credentials for:', this.accountAddress);
             } else {
                 this.isAuthenticated = false;
-                this.updateConnectionStatus(false);
-                this.showNotification('Authentication failed: ' + response.message, 'error');
-                return false;
+                this.accountAddress = null;
+                console.log('No stored credentials found');
             }
         } catch (error) {
-            console.error('Auth validation error:', error);
+            console.error('Error checking connection status:', error);
             this.isAuthenticated = false;
-            this.updateConnectionStatus(false);
-            this.showNotification('Connection error: ' + error.message, 'error');
-            return false;
+            this.accountAddress = null;
+        }
+    }
+
+    updateUIConnectionState() {
+        const connectButton = document.getElementById('connectApiBtn');
+        const connectionStatus = document.getElementById('connectionStatus');
+        
+        if (connectButton) {
+            if (this.isAuthenticated) {
+                connectButton.style.display = 'none';
+            } else {
+                connectButton.style.display = 'block';
+            }
+        }
+        
+        this.updateConnectionStatus(this.isAuthenticated);
+        
+        // Load balance and other data if authenticated
+        if (this.isAuthenticated) {
+            this.loadDashboardData();
+        }
+    }
+
+    async clearCredentials() {
+        try {
+            await this.makeRequest('/auth/clear', { method: 'POST' });
+            this.apiKey = null;
+            this.accountAddress = null;
+            this.isAuthenticated = false;
+            this.updateUIConnectionState();
+            this.showNotification('Credentials cleared successfully', 'success');
+        } catch (error) {
+            console.error('Error clearing credentials:', error);
+            this.showNotification('Error clearing credentials', 'error');
+        }
+    }
+
+    async loadDashboardData() {
+        if (!this.isAuthenticated) {
+            return;
+        }
+
+        try {
+            // Load balance data
+            const balanceResponse = await this.makeRequest('/portfolio/balance');
+            if (balanceResponse.status === 'success') {
+                this.updateBalanceDisplay(balanceResponse.data);
+            }
+        } catch (error) {
+            console.error('Error loading dashboard data:', error);
+        }
+    }
+
+    updateBalanceDisplay(balanceData) {
+        const balanceElement = document.getElementById('totalBalance');
+        if (balanceElement && balanceData) {
+            const totalBalance = balanceData.marginSummary?.accountValue || 0;
+            balanceElement.textContent = this.formatCurrency(totalBalance);
         }
     }
 
@@ -118,6 +128,11 @@ class HyperliquidApp {
             console.error('API request error:', error);
             throw error;
         }
+    }
+
+    // Alias for makeRequest to maintain compatibility
+    async apiRequest(endpoint, options = {}) {
+        return this.makeRequest(endpoint, options);
     }
 
     initWebSocket() {

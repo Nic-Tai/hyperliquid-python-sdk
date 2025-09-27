@@ -58,23 +58,32 @@ class Dashboard {
             return;
         }
 
+        this.hideConnectPrompt();
+        this.showLoading(true);
+
         try {
-            this.showLoading(true);
+            // Load balance data from new endpoint
+            const balanceData = await this.app.makeRequest('/api/portfolio/balance');
             
             // Load portfolio data
-            const portfolioResponse = await this.app.getPortfolioData();
-            if (portfolioResponse.status) {
-                this.portfolioData = portfolioResponse.data;
-                this.updateAccountOverview();
-                this.updateRecentActivity();
+            this.portfolioData = await this.app.getPortfolioData();
+            
+            // Combine balance and portfolio data
+            if (balanceData) {
+                this.portfolioData = {
+                    ...this.portfolioData,
+                    available_balance: balanceData.available_balance,
+                    total_balance: balanceData.total_balance,
+                    unrealized_pnl: balanceData.unrealized_pnl
+                };
             }
             
-            // Hide connect prompt if visible
-            this.hideConnectPrompt();
-            
+            this.updateAccountOverview();
+            this.updateRecentActivity();
+            this.startAutoRefresh();
         } catch (error) {
             console.error('Error loading dashboard data:', error);
-            this.app.showNotification('Failed to load dashboard data: ' + error.message, 'error');
+            this.app.showNotification('Failed to load dashboard data', 'error');
         } finally {
             this.showLoading(false);
         }
@@ -83,32 +92,29 @@ class Dashboard {
     updateAccountOverview() {
         if (!this.portfolioData) return;
 
-        // Calculate total portfolio value
-        let totalValue = 0;
-        let totalPnl = 0;
-        let totalPnlPercent = 0;
-
-        if (this.portfolioData.positions) {
-            this.portfolioData.positions.forEach(position => {
-                totalValue += parseFloat(position.unrealizedPnl || 0);
-                totalPnl += parseFloat(position.unrealizedPnl || 0);
-            });
-        }
-
-        // Update DOM elements
-        this.updateElement('totalBalance', this.app.formatCurrency(totalValue));
-        this.updateElement('totalPnl', this.app.formatCurrency(totalPnl));
-        this.updateElement('totalPnlPercent', this.app.formatPercentage(totalPnlPercent));
-        this.updateElement('openPositions', this.portfolioData.positions ? this.portfolioData.positions.length : 0);
-
+        const availableBalance = this.portfolioData.available_balance || 0;
+        const totalBalance = this.portfolioData.total_balance || 0;
+        const unrealizedPnl = this.portfolioData.unrealized_pnl || 0;
+        const openPositions = this.portfolioData.positions ? this.portfolioData.positions.length : 0;
+        
+        // Calculate PnL percentage
+        const pnlPercentage = totalBalance > 0 ? (unrealizedPnl / totalBalance) * 100 : 0;
+        
+        // Update UI elements
+        this.updateElement('totalBalance', this.app.formatCurrency(totalBalance));
+        this.updateElement('availableBalance', this.app.formatCurrency(availableBalance));
+        this.updateElement('totalPnl', this.app.formatCurrency(unrealizedPnl));
+        this.updateElement('totalPnlPercent', this.app.formatPercentage(pnlPercentage));
+        this.updateElement('openPositions', openPositions.toString());
+        
         // Update PnL color
         const pnlElement = document.getElementById('totalPnl');
         const pnlPercentElement = document.getElementById('totalPnlPercent');
         
         if (pnlElement && pnlPercentElement) {
-            const colorClass = totalPnl >= 0 ? 'positive' : 'negative';
-            pnlElement.className = `value ${colorClass}`;
-            pnlPercentElement.className = `percentage ${colorClass}`;
+            const colorClass = unrealizedPnl >= 0 ? 'text-green-600' : 'text-red-600';
+            pnlElement.className = `text-2xl font-bold ${colorClass}`;
+            pnlPercentElement.className = `text-sm ${colorClass}`;
         }
     }
 
@@ -177,6 +183,12 @@ class Dashboard {
     }
 
     showConnectModal() {
+        // Check if modal already exists and remove it
+        const existingModal = document.getElementById('connectModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
         // Create modal HTML
         const modalHtml = `
             <div class="modal-overlay" id="connectModal">
@@ -190,13 +202,13 @@ class Dashboard {
                     <div class="modal-body">
                         <form id="connectForm">
                             <div class="form-group">
-                                <label for="apiKey">API Key</label>
-                                <input type="password" id="apiKey" name="apiKey" required 
+                                <label for="modalApiKey">API Key</label>
+                                <input type="password" id="modalApiKey" name="apiKey" required 
                                        placeholder="Enter your Hyperliquid API key">
                             </div>
                             <div class="form-group">
-                                <label for="accountAddress">Account Address</label>
-                                <input type="text" id="accountAddress" name="accountAddress" required 
+                                <label for="modalAccountAddress">Account Address</label>
+                                <input type="text" id="modalAccountAddress" name="accountAddress" required 
                                        placeholder="Enter your account address">
                             </div>
                             <div class="form-actions">
@@ -223,8 +235,8 @@ class Dashboard {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const apiKey = document.getElementById('apiKey').value;
-            const accountAddress = document.getElementById('accountAddress').value;
+            const apiKey = document.getElementById('modalApiKey').value;
+            const accountAddress = document.getElementById('modalAccountAddress').value;
             
             if (!apiKey || !accountAddress) {
                 this.app.showNotification('Please fill in all fields', 'warning');

@@ -14,6 +14,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from hyperliquid.api import API
 from hyperliquid.info import Info
 from hyperliquid.exchange import Exchange
+from database import db
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
@@ -24,38 +25,112 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 api_instances = {}
 ws_managers = {}
 
+def initialize_stored_credentials():
+    """Initialize API instances from stored credentials on startup"""
+    try:
+        credentials = db.get_active_credentials()
+        if credentials:
+            base_url = "https://api.hyperliquid-testnet.xyz" if credentials['testnet'] else "https://api.hyperliquid.xyz"
+            info = Info(base_url=base_url)
+            
+            # Test if credentials are still valid
+            try:
+                user_state = info.user_state(credentials['account_address'])
+                
+                # Store API instances
+                user_id = credentials['account_address']
+                api_instances[user_id] = {
+                    'info': info,
+                    'exchange': Exchange(credentials['api_key'], base_url=base_url),
+                    'account_address': credentials['account_address']
+                }
+                print(f"Initialized API instances for stored credentials: {credentials['account_address']}")
+            except Exception as e:
+                print(f"Stored credentials are invalid, clearing: {str(e)}")
+                db.clear_credentials()
+    except Exception as e:
+        print(f"Error initializing stored credentials: {str(e)}")
+
+# Initialize stored credentials on startup
+initialize_stored_credentials()
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
     return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()})
 
+@app.route('/api/auth/status', methods=['GET'])
+def auth_status():
+    """Check if user has valid stored credentials"""
+    try:
+        credentials = db.get_active_credentials()
+        if credentials:
+            # Test if credentials are still valid
+            base_url = "https://api.hyperliquid-testnet.xyz" if credentials['testnet'] else "https://api.hyperliquid.xyz"
+            info = Info(base_url=base_url)
+            
+            try:
+                user_state = info.user_state(credentials['account_address'])
+                return jsonify({
+                    "authenticated": True,
+                    "account_address": credentials['account_address'],
+                    "testnet": credentials['testnet']
+                })
+            except Exception as e:
+                # Credentials are invalid, clear them
+                db.clear_credentials()
+                return jsonify({"authenticated": False, "message": "Stored credentials are invalid"})
+        else:
+            return jsonify({"authenticated": False, "message": "No stored credentials"})
+    except Exception as e:
+        return jsonify({"authenticated": False, "message": f"Error checking auth status: {str(e)}"})
+
+@app.route('/api/auth/clear', methods=['POST'])
+def clear_auth():
+    """Clear stored credentials"""
+    try:
+        if db.clear_credentials():
+            # Clear in-memory API instances
+            api_instances.clear()
+            return jsonify({"status": True, "message": "Credentials cleared successfully"})
+        else:
+            return jsonify({"status": False, "message": "Failed to clear credentials"}), 500
+    except Exception as e:
+        return jsonify({"status": False, "message": f"Error clearing credentials: {str(e)}"}), 500
+
 @app.route('/api/auth/validate', methods=['POST'])
 def validate_auth():
-    """Validate API credentials"""
+    """Validate and save API credentials"""
     try:
         data = request.get_json()
         api_key = data.get('api_key')
         account_address = data.get('account_address')
+        testnet = data.get('testnet', False)
         
         if not api_key or not account_address:
             return jsonify({"status": False, "message": "Missing API key or account address"}), 400
         
         # Create API instance to test connection
-        info = Info(base_url="https://api.hyperliquid.xyz")
+        base_url = "https://api.hyperliquid-testnet.xyz" if testnet else "https://api.hyperliquid.xyz"
+        info = Info(base_url=base_url)
         
         # Test the connection by getting user state
         try:
             user_state = info.user_state(account_address)
             
-            # Store API instances for this user
-            user_id = account_address
-            api_instances[user_id] = {
-                'info': info,
-                'exchange': Exchange(api_key, base_url="https://api.hyperliquid.xyz"),
-                'account_address': account_address
-            }
-            
-            return jsonify({"status": True, "message": "Authentication successful"})
+            # Save credentials to database
+            if db.save_credentials(api_key, account_address, testnet):
+                # Store API instances for this user
+                user_id = account_address
+                api_instances[user_id] = {
+                    'info': info,
+                    'exchange': Exchange(api_key, base_url=base_url),
+                    'account_address': account_address
+                }
+                
+                return jsonify({"status": True, "message": "Authentication successful"})
+            else:
+                return jsonify({"status": False, "message": "Failed to save credentials"}), 500
         except Exception as e:
             return jsonify({"status": False, "message": f"Invalid credentials: {str(e)}"}), 401
             
@@ -66,12 +141,16 @@ def validate_auth():
 def place_order():
     """Place a new order"""
     try:
-        data = request.get_json()
-        account_address = data.get('account_address')
+        # Get stored credentials
+        credentials = db.get_active_credentials()
+        if not credentials:
+            return jsonify({"status": "error", "message": "No stored credentials found"}), 401
         
+        account_address = credentials['account_address']
         if account_address not in api_instances:
-            return jsonify({"status": "error", "message": "Not authenticated"}), 401
+            return jsonify({"status": "error", "message": "API instance not initialized"}), 401
         
+        data = request.get_json()
         exchange = api_instances[account_address]['exchange']
         
         # Extract order parameters
@@ -97,12 +176,16 @@ def place_order():
 def cancel_order():
     """Cancel an existing order"""
     try:
-        data = request.get_json()
-        account_address = data.get('account_address')
+        # Get stored credentials
+        credentials = db.get_active_credentials()
+        if not credentials:
+            return jsonify({"status": "error", "message": "No stored credentials found"}), 401
         
+        account_address = credentials['account_address']
         if account_address not in api_instances:
-            return jsonify({"status": "error", "message": "Not authenticated"}), 401
+            return jsonify({"status": "error", "message": "API instance not initialized"}), 401
         
+        data = request.get_json()
         exchange = api_instances[account_address]['exchange']
         
         asset = data.get('asset')
@@ -114,48 +197,93 @@ def cancel_order():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/api/portfolio/positions', methods=['GET'])
-def get_positions():
-    """Get user positions"""
+@app.route('/api/portfolio/balance', methods=['GET'])
+def get_balance():
     try:
-        account_address = request.args.get('account_address')
+        # Get stored credentials
+        credentials = db.get_active_credentials()
+        if not credentials:
+            return jsonify({'error': 'No stored credentials found'}), 401
         
-        if account_address not in api_instances:
-            return jsonify({"status": "error", "message": "Not authenticated"}), 401
+        # Initialize Hyperliquid info client
+        base_url = "https://api.hyperliquid-testnet.xyz" if credentials['testnet'] else "https://api.hyperliquid.xyz"
+        info = Info(base_url=base_url)
         
-        info = api_instances[account_address]['info']
+        # Get user state (positions and balances)
+        user_state = info.user_state(credentials['account_address'])
         
-        # Get user state which includes positions
-        user_state = info.user_state(account_address)
+        if not user_state:
+            return jsonify({
+                'available_balance': 0,
+                'total_balance': 0,
+                'unrealized_pnl': 0
+            }), 200
         
-        positions = []
-        total_value = 0
+        # Extract balance information
+        available_balance = 0
+        total_balance = 0
         unrealized_pnl = 0
         
-        if 'assetPositions' in user_state:
-            for pos in user_state['assetPositions']:
-                position_data = {
-                    'asset': pos['position']['coin'],
-                    'size': float(pos['position']['szi']),
-                    'entry_price': float(pos['position']['entryPx']) if pos['position']['entryPx'] else 0,
-                    'unrealized_pnl': float(pos['position']['unrealizedPnl']),
-                    'margin_used': float(pos['position']['marginUsed'])
-                }
-                positions.append(position_data)
-                unrealized_pnl += position_data['unrealized_pnl']
-        
-        # Calculate total value from account value
         if 'marginSummary' in user_state:
-            total_value = float(user_state['marginSummary']['accountValue'])
+            margin_summary = user_state['marginSummary']
+            available_balance = float(margin_summary.get('accountValue', 0))
+            total_balance = float(margin_summary.get('totalNtlPos', 0)) + available_balance
+            unrealized_pnl = float(margin_summary.get('totalUnrealizedPnl', 0))
         
         return jsonify({
-            "positions": positions,
-            "total_value": total_value,
-            "unrealized_pnl": unrealized_pnl
+            'available_balance': available_balance,
+            'total_balance': total_balance,
+            'unrealized_pnl': unrealized_pnl
         })
         
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        print(f"Error getting balance: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/portfolio/positions', methods=['GET'])
+def get_positions():
+    try:
+        # Get stored credentials
+        credentials = db.get_active_credentials()
+        if not credentials:
+            return jsonify({'error': 'No stored credentials found'}), 401
+        
+        # Initialize Hyperliquid info client
+        base_url = "https://api.hyperliquid-testnet.xyz" if credentials['testnet'] else "https://api.hyperliquid.xyz"
+        info = Info(base_url=base_url)
+        
+        # Get user state (positions and balances)
+        user_state = info.user_state(credentials['account_address'])
+        
+        if not user_state:
+            return jsonify({'positions': [], 'total_value': 0}), 200
+        
+        positions = []
+        total_value = 0
+        
+        # Process positions
+        if 'assetPositions' in user_state:
+            for position in user_state['assetPositions']:
+                if float(position['position']['szi']) != 0:  # Only include non-zero positions
+                    pos_data = {
+                        'symbol': position['position']['coin'],
+                        'size': float(position['position']['szi']),
+                        'entry_price': float(position['position']['entryPx']) if position['position']['entryPx'] else 0,
+                        'mark_price': float(position['position']['positionValue']) / float(position['position']['szi']) if float(position['position']['szi']) != 0 else 0,
+                        'unrealized_pnl': float(position['position']['unrealizedPnl']),
+                        'percentage_pnl': float(position['position']['returnOnEquity']) * 100
+                    }
+                    positions.append(pos_data)
+                    total_value += float(position['position']['positionValue'])
+        
+        return jsonify({
+            'positions': positions,
+            'total_value': total_value
+        })
+        
+    except Exception as e:
+        print(f"Error getting positions: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/market/data/<asset>', methods=['GET'])
 def get_market_data(asset):
@@ -200,24 +328,60 @@ def get_market_data(asset):
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/api/market/assets', methods=['GET'])
-def get_assets():
-    """Get list of available assets"""
+def get_all_assets():
+    """Get all available assets"""
     try:
-        info = Info(base_url="https://api.hyperliquid.xyz")
-        meta_and_asset_ctxs = info.meta_and_asset_ctxs()
+        # Use any available API instance or create a new one
+        if api_instances:
+            info = list(api_instances.values())[0]['info']
+        else:
+            info = Info()
         
-        assets = []
-        for ctx in meta_and_asset_ctxs[1]:  # asset contexts
-            assets.append({
-                'symbol': ctx['name'],
-                'name': ctx['name'],
-                'sz_decimals': ctx['szDecimals']
-            })
+        # Get all available assets
+        meta = info.meta()
+        assets = [asset['name'] for asset in meta['universe']]
         
-        return jsonify({"assets": assets})
-        
+        return jsonify({
+            "status": "success",
+            "data": assets
+        })
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+@app.route('/api/market/symbols', methods=['GET'])
+def get_trading_symbols():
+    """Get all available trading symbols with detailed information"""
+    try:
+        # Use any available API instance or create a new one
+        if api_instances:
+            info = list(api_instances.values())[0]['info']
+        else:
+            info = Info()
+        
+        # Get market metadata
+        meta = info.meta()
+        symbols = []
+        
+        for asset in meta['universe']:
+            symbol_info = {
+                'symbol': asset['name'],
+                'maxLeverage': asset.get('maxLeverage', 1),
+                'onlyIsolated': asset.get('onlyIsolated', False)
+            }
+            symbols.append(symbol_info)
+        
+        return jsonify({
+            "status": "success",
+            "data": symbols
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
 
 # WebSocket events
 @socketio.on('connect')

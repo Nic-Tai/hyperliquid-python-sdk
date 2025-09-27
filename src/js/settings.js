@@ -174,14 +174,31 @@ class Settings {
             return;
         }
 
-        // Save credentials
-        this.app.saveCredentials({
-            apiKey,
-            accountAddress,
-            testnet
-        });
+        try {
+            // Validate and save credentials to backend
+            const response = await this.app.makeRequest('/api/auth/validate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    api_key: apiKey,
+                    account_address: accountAddress,
+                    testnet: testnet
+                })
+            });
 
-        this.app.showNotification('API configuration saved successfully', 'success');
+            if (response.valid) {
+                this.app.showNotification('API configuration saved and validated successfully', 'success');
+                // Update the main app's connection status
+                await this.app.checkConnectionStatus();
+            } else {
+                this.app.showNotification('Invalid credentials. Please check your API key and account address.', 'error');
+            }
+        } catch (error) {
+            console.error('Error saving API configuration:', error);
+            this.app.showNotification('Failed to save API configuration', 'error');
+        }
     }
 
     async testConnection() {
@@ -193,9 +210,29 @@ class Settings {
         feather.replace();
 
         try {
-            const isValid = await this.app.validateAuth();
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const accountAddress = document.getElementById('accountAddress').value.trim();
+            const testnet = document.getElementById('testnet').checked;
+
+            if (!apiKey || !accountAddress) {
+                this.app.showNotification('Please enter both API key and account address', 'error');
+                return;
+            }
+
+            // Test connection with current form values
+            const response = await this.app.makeRequest('/api/auth/validate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    api_key: apiKey,
+                    account_address: accountAddress,
+                    testnet: testnet
+                })
+            });
             
-            if (isValid) {
+            if (response.valid) {
                 this.app.showNotification('Connection successful!', 'success');
             } else {
                 this.app.showNotification('Connection failed. Please check your credentials.', 'error');
