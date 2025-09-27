@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hyperliquid Trading Dashboard</title>
+    <link rel="stylesheet" href="./styles/main.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.29.0/feather.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Navigation Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2 class="logo">Hyperliquid</h2>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item active">
+                    <a href="index.html" class="nav-link">
+                        <i data-feather="home"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="trading.html" class="nav-link">
+                        <i data-feather="trending-up"></i>
+                        <span>Trading</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="portfolio.html" class="nav-link">
+                        <i data-feather="briefcase"></i>
+                        <span>Portfolio</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="market.html" class="nav-link">
+                        <i data-feather="bar-chart-2"></i>
+                        <span>Market Data</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="settings.html" class="nav-link">
+                        <i data-feather="settings"></i>
+                        <span>Settings</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <h1>Dashboard</h1>
+                </div>
+                <div class="header-right">
+                    <div class="connection-status" id="connectionStatus">
+                        <span class="status-indicator offline"></span>
+                        <span class="status-text">Disconnected</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard Content -->
+            <div class="dashboard-content">
+                <!-- Account Overview Cards -->
+                <div class="overview-cards">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Total Portfolio Value</h3>
+                            <i data-feather="dollar-sign"></i>
+                        </div>
+                        <div class="card-content">
+                            <div class="metric-value" id="totalValue">$0.00</div>
+                            <div class="metric-change positive" id="totalValueChange">+0.00%</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Unrealized PnL</h3>
+                            <i data-feather="trending-up"></i>
+                        </div>
+                        <div class="card-content">
+                            <div class="metric-value" id="unrealizedPnl">$0.00</div>
+                            <div class="metric-change" id="unrealizedPnlChange">+0.00%</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Active Positions</h3>
+                            <i data-feather="layers"></i>
+                        </div>
+                        <div class="card-content">
+                            <div class="metric-value" id="activePositions">0</div>
+                            <div class="metric-label">Open Positions</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Available Balance</h3>
+                            <i data-feather="credit-card"></i>
+                        </div>
+                        <div class="card-content">
+                            <div class="metric-value" id="availableBalance">$0.00</div>
+                            <div class="metric-label">Available for Trading</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="activity-section">
+                    <div class="section-header">
+                        <h2>Recent Activity</h2>
+                        <button class="btn btn-secondary" onclick="refreshActivity()">
+                            <i data-feather="refresh-cw"></i>
+                            Refresh
+                        </button>
+                    </div>
+                    <div class="activity-list" id="activityList">
+                        <div class="activity-item">
+                            <div class="activity-icon">
+                                <i data-feather="info"></i>
+                            </div>
+                            <div class="activity-content">
+                                <div class="activity-title">Connect your API to view activity</div>
+                                <div class="activity-time">Go to Settings to configure your API credentials</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="quick-actions">
+                    <h2>Quick Actions</h2>
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" onclick="window.location.href='trading.html'">
+                            <i data-feather="plus"></i>
+                            Place Order
+                        </button>
+                        <button class="btn btn-secondary" onclick="window.location.href='portfolio.html'">
+                            <i data-feather="eye"></i>
+                            View Positions
+                        </button>
+                        <button class="btn btn-secondary" onclick="window.location.href='market.html'">
+                            <i data-feather="bar-chart"></i>
+                            Market Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.29.0/feather.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script type="module" src="./js/main.js"></script>
+    <script type="module" src="./js/dashboard.js"></script>
+</body>
+</html>
